@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <meta name="description" content="滴水智联 · 水表照片识读、设备采集与用水可视化工作台">
+  <title>滴水智联 · 水表识读工作台</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <script src="/static/app.js" defer></script>
+</head>
+<body data-mode="{{ mode|default('admin') }}">
+  <svg class="icon-library" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><defs>
+    <symbol id="i-drop" viewBox="0 0 24 24"><path d="M12 2C9 6 5 10 5 14a7 7 0 0 0 14 0c0-4-4-8-7-12Z"/><path d="M8 14a4 4 0 0 0 4 4"/></symbol>
+    <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+    <symbol id="i-chart" viewBox="0 0 24 24"><path d="M4 3v17h17M8 14l4-5 4 3 5-7"/></symbol>
+    <symbol id="i-device" viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="16" rx="3"/><path d="M9 8h6M9 12h6M11 16h2M2 9h3m14 0h3M2 15h3m14 0h3"/></symbol>
+    <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 16V3m-5 5 5-5 5 5M4 15v5a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-5"/></symbol>
+    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14m-6-6 6 6-6 6"/></symbol>
+    <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 7v5h-5M4 17v-5h5"/><path d="M6 7a7 7 0 0 1 12-1l2 6M4 12l2 6a7 7 0 0 0 12-1"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24"><path d="m12 3 8 3v6c0 5-8 9-8 9s-8-4-8-9V6l8-3Z"/><path d="m8 12 3 3 5-6"/></symbol>
+    <symbol id="i-image" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8" cy="8" r="1"/><path d="m3 17 5-5 4 4 4-6 5 7"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 3 2 20h20L12 3Z"/><path d="M12 9v5M12 17.5v.5"/></symbol>
+    <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6 8-6s8 2 8 6"/></symbol>
+    <symbol id="i-logout" viewBox="0 0 24 24"><path d="M9 4H5a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h4M15 8l4 4-4 4M19 12H9"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  </defs></svg>
+  <a class="skip-link" href="#main">跳到主要内容</a>
+  <section id="login-screen" class="login-screen" hidden>
+    <form id="login-form" class="login-card">
+      <div class="brand login-brand"><span class="brand-mark"><svg class="icon"><use href="#i-drop"/></svg></span><span>滴水智联<small>DRIPLINK / METER LAB</small></span></div>
+      <div class="login-heading"><span class="section-kicker">SIGN IN</span><h1>登录以查看你的水表</h1><p>管理员可管理全部设备与成员；普通用户仅能查看自己被授权的设备与用水情况。</p></div>
+      <div class="banner neutral" id="login-message" role="status" hidden></div>
+      <label class="field-label" for="login-username">用户名</label>
+      <input id="login-username" type="text" autocomplete="username" required>
+      <label class="field-label" for="login-password">密码</label>
+      <input id="login-password" type="password" autocomplete="current-password" required>
+      <p id="login-error" class="inline-error" role="alert" hidden></p>
+      <button id="login-submit" class="button primary full-width" type="submit" disabled>登录<svg class="icon trailing"><use href="#i-arrow"/></svg></button>
+      <button id="login-cancel" class="button secondary full-width" type="button" hidden>返回管理员视图</button>
+      <p class="form-hint">管理员可管理全部设备；普通用户仅查看自己被授权的设备与用水。</p>
+    </form>
+  </section>
+  <aside class="sidebar">
+    <a class="brand" href="#workbench" aria-label="滴水智联首页"><span class="brand-mark"><svg class="icon"><use href="#i-drop"/></svg></span><span>滴水智联<small>DRIPLINK / METER LAB</small></span></a>
+    <div class="nav-caption">水表数据中心</div>
+    <nav class="nav-list" aria-label="主要导航">
+      <a class="nav-item" href="#monitor" data-view="monitor" data-role="any"><svg class="icon"><use href="#i-alert"/></svg><span>设备与预警</span><span class="nav-dot"></span></a>
+      <a class="nav-item active" href="#workbench" data-view="workbench" data-role="admin"><svg class="icon"><use href="#i-grid"/></svg><span>识别工作台</span><span class="nav-dot"></span></a>
+      <a class="nav-item" href="#history" data-view="history" data-role="admin"><svg class="icon"><use href="#i-clock"/></svg><span>历史记录</span></a>
+      <a class="nav-item" href="#analytics" data-view="analytics" data-role="any"><svg class="icon"><use href="#i-chart"/></svg><span>用水分析</span></a>
+      <a class="nav-item" href="#devices" data-view="devices" data-role="admin"><svg class="icon"><use href="#i-device"/></svg><span>设备接入</span></a>
+    </nav>
+    <div class="sidebar-note"><span class="eyebrow">AUTO & TRACEABLE</span><svg class="icon"><use href="#i-shield"/></svg><strong>每一笔读数，都可追溯</strong><p>设备读数自动计入用水统计，异常记录可删除并追溯。</p><span class="mini-tag">本地部署 · 自动统计</span></div>
+    <div class="sidebar-footer"><span class="small-dot"></span> WMeter · 全指针水表识读</div>
+  </aside>
+
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="breadcrumb">水表管理 <span>/</span> <strong id="current-view-label">识别工作台</strong></div>
+      <div class="top-actions"><span id="model-pill" class="status-pill neutral"><span class="small-dot"></span><span id="model-pill-text">正在连接模型</span></span><span id="user-pill" class="status-pill neutral" hidden><svg class="icon"><use href="#i-user"/></svg><span id="user-pill-text">本机管理员</span></span><button id="login-button" class="icon-button" type="button" aria-label="登录或切换账号" title="登录或切换账号" hidden><svg class="icon"><use href="#i-user"/></svg></button><button id="logout-button" class="icon-button" type="button" aria-label="退出登录" title="退出登录" hidden><svg class="icon"><use href="#i-logout"/></svg></button><button id="refresh-button" class="icon-button" type="button" aria-label="刷新服务状态与当前数据" title="刷新状态与数据"><svg class="icon"><use href="#i-refresh"/></svg></button><span class="workspace-avatar" aria-hidden="true">水</span></div>
+    </header>
+    <main id="main" tabindex="-1">
+      <div id="service-banner" class="banner neutral" role="status">正在连接本地服务，读取模型与安全状态…</div>
+      <section class="page-heading"><div><div class="eyebrow">WATER INTELLIGENCE / 工作空间</div><h1 id="page-title">让每一滴水，清晰可见<span class="title-dot">.</span></h1><p id="page-description">从一张水表照片开始，识读、核验，再看见用水变化。</p></div><form id="meter-form" class="meter-filter"><label for="meter-id">当前水表 <span>METER ID</span></label><div class="input-action"><input id="meter-id" name="meter_id" type="text" value="demo" maxlength="120" list="meter-options" autocomplete="off" required aria-describedby="meter-filter-help"><button class="button secondary compact" type="submit">切换</button></div><small id="meter-filter-help">上传、记录及分析使用同一水表编号</small><datalist id="meter-options"></datalist></form></section>
+
+      <section id="view-workbench" class="view" aria-label="识别工作台">
+        <div class="workflow-strip"><div class="step active"><span>01</span><strong>上传水表照片</strong></div><span class="step-line"></span><div class="step"><span>02</span><strong>查看候选读数</strong></div><span class="step-line"></span><div class="step"><span>03</span><strong>自动计入统计</strong></div><span class="workflow-note">手动上传为测试样本，设备读数自动计入</span></div>
+        <div class="workbench-grid">
+          <section class="card upload-card"><div class="card-heading"><div><span class="section-kicker">PHOTO INPUT</span><h2>上传与识读</h2></div><span class="tag subtle">单张照片</span></div>
+            <form id="upload-form">
+              <div id="drop-zone" class="drop-zone"><input id="file-input" name="file" type="file" accept="image/*" class="visually-hidden"><div id="upload-placeholder" class="upload-placeholder"><div class="upload-orbit"><svg class="icon"><use href="#i-upload"/></svg></div><h3>将水表照片拖到这里</h3><p>尽量正对表盘，保持指针与刻度清晰</p><button id="choose-file" class="button secondary" type="button">选择本地图片<svg class="icon"><use href="#i-arrow"/></svg></button><small>支持浏览器可预览的图片 · 不上传外网地址</small></div><img id="upload-preview" class="upload-preview" alt="待上传的水表照片预览" hidden><button id="replace-file" class="button preview-replace" type="button" hidden>更换图片</button></div>
+              <div class="file-info"><span id="file-name">尚未选择图片</span><span id="file-size">本地预览</span></div>
+              <div class="sample-option"><span><strong>手动上传 = 测试样本</strong><small>用于检验识别模型，不计入用水统计</small></span><span class="tag teal">仅管理员</span></div>
+              <div class="source-line"><span>提交来源</span><strong id="source-label">manual · 测试样本</strong></div>
+              <button id="predict-button" class="button primary full-width" type="submit" disabled><svg class="icon"><use href="#i-grid"/></svg><span id="predict-button-text">开始识读</span><svg class="icon trailing"><use href="#i-arrow"/></svg></button>
+              <p class="form-hint" id="upload-hint">先选择图片，模型就绪后即可提交。手动上传为测试样本，不计入统计。</p>
+            </form>
+          </section>
+          <section class="card result-card" aria-labelledby="result-heading"><div class="card-heading"><div><span class="section-kicker">READING RESULT</span><h2 id="result-heading">识读结果</h2></div><span id="result-state" class="tag subtle">等待上传</span></div>
+            <div id="result-empty" class="empty-state result-empty"><div class="meter-illustration" aria-hidden="true"><div class="meter-dial"><span class="dial-hand"></span><span class="dial-center"></span></div><div class="meter-slots"><i></i><i></i><i></i><i></i></div><span class="meter-pipe pipe-left"></span><span class="meter-pipe pipe-right"></span></div><h3>下一笔读数，从这里开始</h3><p>上传照片后显示候选读数和标注图。<br>我们不会用演示数据填充你的工作台。</p><span class="empty-footnote">模型辅助识读 / 设备数据自动计入</span></div>
+            <div id="result-content" hidden><div class="reading-block"><div class="reading-label">模型候选读数 <span>非人工核验结果</span></div><div class="reading-number"><strong id="predicted-reading">—</strong><span>m³</span></div><div class="integer-line">整数部分 <strong id="integer-reading">—</strong> m³ <span>精度显示不代表准确率</span></div></div><div class="comparison-grid"><div><span>Context · 联合识读</span><strong id="context-reading">—</strong></div><div><span>Independent · 独立识读</span><strong id="independent-reading">—</strong></div></div><dl class="record-meta"><div><dt>水表编号</dt><dd id="result-meter">—</dd></div><div><dt>拍摄 / 提交时间</dt><dd id="result-time">—</dd></div><div><dt>记录来源</dt><dd id="result-source">—</dd></div><div><dt>检测区域</dt><dd id="result-regions">—</dd></div></dl><div class="image-toolbar"><strong>照片核对</strong><div class="segmented" role="group" aria-label="切换核对图片"><button id="show-original" type="button" aria-pressed="true">原图</button><button id="show-result" type="button" aria-pressed="false">标注图</button></div></div><div class="result-image-wrap"><img id="result-image" alt="水表核对照片" hidden><span id="result-image-empty">暂无可用图片</span></div><div class="warning-box"><strong>识读提示与风险</strong><ul id="result-warnings"></ul></div><div class="result-footer"><div><strong id="review-state-label">等待上传</strong><p id="review-state-help">手动上传为测试样本；设备读数会自动计入统计。</p></div></div></div>
+          </section>
+        </div>
+        <section class="principles-row" aria-label="数据处理原则"><div><span class="principle-number">01 /</span><strong>照片留痕</strong><p>原图与标注图对照，异常可追溯。</p></div><div><span class="principle-number">02 /</span><strong>测试隔离</strong><p>手动上传为测试样本，不污染统计。</p></div><div><span class="principle-number">03 /</span><strong>自动统计</strong><p>设备读数自动计入用水变化分析。</p></div></section>
+      </section>
+
+      <section id="view-history" class="view" aria-label="历史记录" hidden><div class="section-toolbar"><div><h2>水表记录</h2><p>保留识读过程，让每次设备采集有据可查。</p></div><div class="toolbar-actions"><label class="filter-label" for="record-filter">记录类型<select id="record-filter"><option value="all">全部记录</option><option value="confirmed">已计入统计</option><option value="sample">测试样本</option></select></label><button id="refresh-records" class="button secondary" type="button">刷新记录</button></div></div><div class="banner neutral">测试样本不纳入用水统计；设备记录自动计入，可按需删除异常记录。</div><section class="card records-card"><div class="card-heading"><h3>记录明细 <span id="record-count" class="tag subtle">—</span></h3><span class="muted small">单位：m³</span></div><div id="records-message" class="empty-state" role="status">正在读取记录…</div><div id="records-table-wrap" class="table-scroll" hidden><table><caption class="visually-hidden">当前水表的识读与计入记录</caption><thead><tr><th scope="col">时间 / 记录</th><th scope="col">来源</th><th scope="col">模型候选</th><th scope="col">计入读数</th><th scope="col">状态</th><th scope="col">操作</th></tr></thead><tbody id="records-body"></tbody></table></div><div class="toolbar-actions"><button id="newer-records" class="button secondary" type="button" disabled>较新记录</button><span id="page-info" class="muted small"></span><button id="older-records" class="button secondary" type="button" disabled>更早记录</button></div></section></section>
+
+      <section id="view-analytics" class="view" aria-label="用水分析" hidden><div class="section-toolbar"><div><h2>看见用水的变化</h2><p>仅基于设备自动计入的读数分析，不将测试样本当作实际用量。</p></div><button id="refresh-analytics" class="button secondary" type="button">刷新分析</button></div><div id="analytics-message" class="banner neutral" role="status">正在读取分析…</div><div class="stats-grid"><article class="card stat-card"><span>已计入记录</span><strong id="stat-count">—</strong><small>设备自动 / 条</small></article><article class="card stat-card"><span>最新读数</span><strong id="stat-latest">—</strong><small>累计表显 / m³</small></article><article class="card stat-card"><span>区间净用水量</span><strong id="stat-net">—</strong><small>读数差 / m³</small></article><article class="card stat-card"><span>日均用水量</span><strong id="stat-average">—</strong><small>按有效时间间隔计算 / m³·日⁻¹</small></article></div><div class="analytics-grid"><section class="card chart-card"><div class="card-heading"><div><span class="section-kicker">CONFIRMED READINGS</span><h3>累计读数趋势</h3></div><span class="legend"><i></i>设备读数</span></div><div id="chart-empty" class="empty-state chart-empty">暂无设备数据，采集后显示趋势。</div><svg id="usage-chart" class="usage-chart" viewBox="0 0 720 290" role="img" aria-labelledby="chart-title chart-description" hidden><title id="chart-title">累计读数趋势</title><desc id="chart-description">暂无数据</desc></svg><p id="chart-interval" class="chart-caption">时间跨度：—</p><details class="chart-data-details"><summary>查看趋势数据</summary><div class="table-scroll"><table><thead><tr><th>时间</th><th>读数 m³</th><th>区间用量 m³</th></tr></thead><tbody id="analytics-points-body"></tbody></table></div></details></section><section class="card advice-card"><div class="card-heading"><div><span class="section-kicker">WATER SAVING</span><h3>规则节水建议（非大模型）</h3></div></div><ul id="advice-list" class="advice-list"></ul><p id="advice-note" class="form-hint">建议由后端规则生成，不是大模型诊断。</p></section></div><section class="card alerts-card"><div class="card-heading"><h3>用水提醒</h3><span class="tag subtle">规则检测 · 非故障诊断</span></div><div id="alerts-list" class="alerts-list"></div></section></section>
+
+      <section id="view-devices" class="view" aria-label="设备接入" hidden><section class="device-hero card"><div><span class="section-kicker">EDGE TO DASHBOARD</span><h2>将树莓派接入工作台</h2><p>设备负责拍摄与上传，服务端负责识读并自动计入统计。<br>定时采集由树莓派端配置，这里不执行实际定时任务。</p><div class="device-tags"><span class="tag teal">设备端定时</span><span class="tag subtle">上传需鉴权</span><span class="tag subtle">自动计入统计</span></div></div><div class="device-art" aria-hidden="true"><svg class="icon"><use href="#i-device"/></svg><span class="connection-line"></span><svg class="icon"><use href="#i-drop"/></svg></div></section><div class="device-grid"><section class="card"><div class="card-heading"><div><span class="section-kicker">UPLOAD CONTRACT</span><h3>设备上传接口</h3></div><span class="tag teal">POST</span></div><div id="device-message" class="banner neutral" role="status">正在读取设备接入信息…</div><div class="endpoint-box"><span>multipart/form-data</span><code id="device-endpoint">—</code></div><h4>必需字段</h4><div id="device-fields" class="field-chips"></div><dl class="device-meta"><div><dt>采集间隔示例</dt><dd id="device-interval">—</dd></div><div><dt>鉴权状态</dt><dd id="device-auth">等待读取服务配置</dd></div><div><dt>上传后的状态</dt><dd>服务端自动计入统计，可按需删除异常记录</dd></div></dl><p id="device-note" class="form-hint">此页面不显示或获取设备访问 token。</p></section><section class="card security-card"><div class="card-heading"><div><span class="section-kicker">SAFE DEPLOYMENT</span><h3>连接前，请先确认</h3></div><svg class="icon"><use href="#i-shield"/></svg></div><ol class="security-list"><li><strong>使用服务主机的局域网 IP</strong><p>127.0.0.1 只表示设备本机，不是局域网 IP。树莓派不能用它访问另一台电脑上的服务。</p></li><li><strong>设备凭证只在设备端安全保存</strong><p>上传接口需要服务端配置的鉴权凭证；此页面不返回 token。具体请求头与配置方式以服务端文档为准。</p></li><li><strong>不要将服务裸露到公网</strong><p>仅在可信局域网使用。跨网络访问需额外配置 HTTPS、访问控制与安全网关。</p></li><li><strong>定时任务在树莓派端运行</strong><p>采集时间 captured_at 与唯一 upload_id 随照片提交；由设备定时器或脚本安排上传。</p></li></ol></section></div></section>
+      <section id="view-monitor" class="view" aria-label="设备与预警" hidden>
+        <div class="section-toolbar"><div><h2>设备与预警</h2><p id="monitor-subtitle">集中监视设备在线状态与用水异常。</p></div><button id="refresh-monitor" class="button secondary" type="button">刷新</button></div>
+        <div id="monitor-message" class="banner neutral" role="status">正在读取设备与预警…</div>
+        <div class="stats-grid">
+          <article class="card stat-card"><span>设备总数</span><strong id="monitor-stat-total">—</strong><small>已登记水表 / 块</small></article>
+          <article class="card stat-card"><span>在线</span><strong id="monitor-stat-online">—</strong><small>最近有采集或心跳</small></article>
+          <article class="card stat-card"><span>离线</span><strong id="monitor-stat-offline">—</strong><small>超过预期间隔未上报</small></article>
+          <article class="card stat-card"><span>异常预警</span><strong id="monitor-stat-alerts">—</strong><small>未解决 / 条</small></article>
+        </div>
+        <section class="card alerts-card"><div class="card-heading"><div><span class="section-kicker">ANOMALY</span><h3>异常预警</h3></div><span class="tag subtle">规则引擎 · 非大模型</span></div><div id="monitor-alerts" class="alerts-list"></div></section>
+        <section id="user-usage-card" class="card" hidden><div class="card-heading"><div><span class="section-kicker">MY WATER</span><h3>个人用水</h3></div><span class="tag teal">仅显示你的设备</span></div><div class="stats-grid" style="margin-top:0"><article class="card stat-card"><span>最新读数</span><strong id="user-latest">—</strong><small>累计表显 / m³</small></article><article class="card stat-card"><span>净用水量</span><strong id="user-net">—</strong><small>区间差值 / m³</small></article><article class="card stat-card"><span>日均用水</span><strong id="user-average">—</strong><small>m³·日⁻¹</small></article><article class="card stat-card"><span>已计入记录</span><strong id="user-count">—</strong><small>设备自动记录 / 条</small></article></div><div class="card-heading" style="margin-top:10px"><h3>节水建议</h3></div><ul id="user-advice" class="advice-list"></ul></section>
+        <section class="card"><div class="card-heading"><div><span class="section-kicker">DEVICES</span><h3 id="monitor-meter-heading">设备清单</h3></div><span id="monitor-meter-count" class="tag subtle">—</span></div><div id="monitor-meters" class="monitor-meters"></div></section>
+        <div id="monitor-admin-panel" hidden>
+          <div class="device-grid">
+            <section class="card"><div class="card-heading"><div><span class="section-kicker">MANAGE</span><h3>新增水表</h3></div></div>
+              <form id="meter-create-form" class="stack-form">
+                <label class="field-label" for="new-meter-id">水表编号（1–64位字母数字 _ -）</label><input id="new-meter-id" type="text" maxlength="64" required>
+                <label class="field-label" for="new-meter-name">显示名称（可选）</label><input id="new-meter-name" type="text" maxlength="120">
+                <div class="form-grid-2">
+                  <div><label class="field-label" for="new-meter-interval">采集间隔（秒）</label><input id="new-meter-interval" type="number" min="60" step="1" value="3600"></div>
+                  <div><label class="field-label" for="new-meter-limit">日用水阈值 m³（可选）</label><input id="new-meter-limit" type="number" min="0" step="0.1"></div>
+                </div>
+                <button id="meter-create-submit" class="button primary" type="submit" disabled><svg class="icon"><use href="#i-plus"/></svg>创建水表</button>
+                <p id="meter-create-error" class="inline-error" role="alert" hidden></p>
+              </form>
+            </section>
+            <section class="card"><div class="card-heading"><div><span class="section-kicker">DEVICE CREDENTIAL</span><h3>新增采集设备</h3></div></div>
+              <form id="device-create-form" class="stack-form">
+                <label class="field-label" for="new-device-meter">所属水表编号</label><input id="new-device-meter" type="text" maxlength="64" list="meter-options" required>
+                <label class="field-label" for="new-device-name">设备显示名（可选）</label><input id="new-device-name" type="text" maxlength="120">
+                <button id="device-create-submit" class="button secondary" type="submit" disabled><svg class="icon"><use href="#i-plus"/></svg>生成设备凭证</button>
+                <p id="device-create-error" class="inline-error" role="alert" hidden></p>
+                <div id="device-token-box" class="token-box" hidden><strong>设备访问凭证（仅显示一次）</strong><code id="device-token-value"></code><p>请立即复制保存到设备端环境变量 DRIPLINK_DEVICE_TOKEN；服务端只保存摘要，关闭后无法找回。</p></div>
+              </form>
+            </section>
+          </div>
+        </div>
+      </section>
+      <footer class="page-footer"><span>滴水智联 <b>·</b> 从识读到理解，让数据真实发生</span><span>模型辅助，不替代人工核验</span></footer>
+    </main>
+  </div>
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+  <dialog id="delete-dialog" class="modal" aria-labelledby="delete-title"><form id="delete-form"><div class="modal-heading"><h2 id="delete-title">确定删除这条记录？</h2><button class="icon-button modal-close" type="button" data-close-dialog="delete-dialog" aria-label="关闭删除窗口">×</button></div><p id="delete-description"></p><div class="banner warning">删除后无法在此页面恢复，相关统计会重新计算。</div><p id="delete-error" class="inline-error" role="alert" hidden></p><div class="modal-actions"><button class="button secondary" type="button" data-close-dialog="delete-dialog">保留记录</button><button id="delete-submit" class="button danger" type="submit">确认删除</button></div></form></dialog>
+  <noscript><div class="noscript">此工作台需要启用 JavaScript 才能上传与读取真实数据。</div></noscript>
+</body>
+</html>
