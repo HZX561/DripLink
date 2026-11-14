@@ -1,0 +1,14 @@
+[Unit]
+Description=DripLink camera capture and durable upload
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=pi
+WorkingDirectory=/home/pi/DripLink-main
+EnvironmentFile=/etc/driplink-camera.env
+ExecStart=/usr/bin/python3 /home/pi/DripLink-main/pi_client/uploader.py --once
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
