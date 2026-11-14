@@ -23,7 +23,8 @@ jobs:
           cache: pip
           cache-dependency-path: requirements-win-cpu.lock
       - name: Install locked CPU dependencies
-        run: python -m pip install --require-hashes --only-binary=:all: -r requirements-win-cpu.lock
+        run: |
+          python -m pip install --require-hashes --only-binary=:all: -r requirements-win-cpu.lock
       - name: Check dependencies
         run: python -m pip check
       - name: Check environment
