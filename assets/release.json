@@ -1,0 +1,52 @@
+{
+  "repository": "HZX561/DripLink",
+  "tag": "v0.1.0",
+  "scope": "full_pointer",
+  "manifest_sha256": "ddd23a9f10c88420e2b90824bebf4fea6f18ed27e698962cc573fa005f168486",
+  "image_count": 3780,
+  "split_counts": {
+    "train": 2601,
+    "val": 607,
+    "test": 572
+  },
+  "bundles": {
+    "models": {
+      "name": "driplink-models-v0.1.0.zip",
+      "sha256": "f510b884b7157fa231be5fef5d99b891da8882ae3e3e4244e301fae9c4c4379c",
+      "bytes": 23317778,
+      "files": 8,
+      "unpacked_bytes": 25727260,
+      "url": "https://github.com/HZX561/DripLink/releases/download/v0.1.0/driplink-models-v0.1.0.zip"
+    },
+    "data": {
+      "name": "driplink-data-v0.1.0.zip",
+      "sha256": "83a564d0dd3cba43fbc3d07d3bf2887c3f12d00fa8355c40f10fd441b6725a30",
+      "bytes": 85763796,
+      "files": 3789,
+      "unpacked_bytes": 124672233,
+      "url": "https://github.com/HZX561/DripLink/releases/download/v0.1.0/driplink-data-v0.1.0.zip"
+    },
+    "cache": {
+      "name": "driplink-cache-v0.1.0.zip",
+      "sha256": "c76cc478c1f8c1c684f50221e45a7038acadfd93f91114c1e4cffe4afa8cff03",
+      "bytes": 197714190,
+      "files": 8,
+      "unpacked_bytes": 310374075,
+      "url": "https://github.com/HZX561/DripLink/releases/download/v0.1.0/driplink-cache-v0.1.0.zip"
+    },
+    "reports": {
+      "name": "driplink-reports-v0.1.0.zip",
+      "sha256": "1b3ad6c1d25dd3296903d192e9329e7252a6346d684aa3302341b2e004c069d7",
+      "bytes": 3924616,
+      "files": 38,
+      "unpacked_bytes": 9288515,
+      "url": "https://github.com/HZX561/DripLink/releases/download/v0.1.0/driplink-reports-v0.1.0.zip"
+    }
+  },
+  "preview": {
+    "name": "prediction_vs_gt.jpg",
+    "sha256": "114a966efa0fd9c7435eddcb5577a5ff7388acee24ceffcb252e6e0d28c5f1cf",
+    "bytes": 763503,
+    "url": "https://github.com/HZX561/DripLink/releases/download/v0.1.0/prediction_vs_gt.jpg"
+  }
+}

@@ -5,6 +5,8 @@ This project's source code is provided under GNU AGPL version 3 only.
 See LICENSE for the complete license text.
 
 Third-party dependencies retain their respective licenses.
-WMeter5K photographs, annotations, author checkpoints and local research
-artifacts are not included in this source distribution and are not
-relicensed by this project. See docs/THIRD_PARTY_NOTICES.md.
+Selected project checkpoints and research assets are available separately
+in GitHub Releases. Project checkpoints accompany the AGPL-3.0-only source.
+WMeter5K photographs and original annotations retain their original
+authorship and applicable terms; they are not relicensed by this project.
+See docs/THIRD_PARTY_NOTICES.md.

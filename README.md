@@ -15,18 +15,31 @@ flowchart LR
 
 ## 开源发布范围
 
-本仓库发布源码、锁定环境、无需数据的测试、采集模板和汇总指标。**不包含训练照片、标注清单、模型权重、人工核对资料或本机实验日志。** 本地已有的这些文件继续保留，Git 不会上传它们。
+源码和文档通过 Git 管理，**当前实验的照片、标注、固定划分、模型权重、训练缓存和完整评估结果通过 [v0.1.0 Release](https://github.com/HZX561/DripLink/releases/tag/v0.1.0) 下载**。工作副本继续由 `.gitignore` 排除，避免把大文件反复写入 Git 历史。
 
-克隆后可以安装环境、检查模型结构并运行核心测试。实际识别、继续训练和复测历史指标，需要另外取得本项目的初始权重、冻结划分和合法取得的数据。仅下载 WMeter5K 原始包不能自动还原本项目的选定权重及冻结划分。具体文件要求见 [复现说明](docs/REPRODUCIBILITY.md)、[数据说明](data/README.md) 和 [模型说明](models/README.md)。
+| 发布包 | 内容 | 压缩大小 |
+|---|---|---:|
+| `driplink-models-v0.1.0.zip` | 当前检测器、读数网络、选优配置及来源记录 | 22.24 MiB |
+| `driplink-data-v0.1.0.zip` | 3780张全指针原图、完整标注、固定划分及来源清单 | 81.79 MiB |
+| `driplink-cache-v0.1.0.zip` | GT裁剪、训练/验证检测裁剪及训练目标 | 188.55 MiB |
+| `driplink-reports-v0.1.0.zip` | 验证、历史测试、训练记录与照片核对材料 | 3.74 MiB |
+
+提供 SHA256 清单及自动下载校验脚本。数据来源和适用条件见 [第三方说明](docs/THIRD_PARTY_NOTICES.md)；文件清单与复现步骤见 [复现说明](docs/REPRODUCIBILITY.md)。
 
 ```powershell
 git clone https://github.com/HZX561/DripLink.git
 cd DripLink
 .\bootstrap.ps1 -Device cpu -Python 'C:\path\to\python311\python.exe'
+.\.venv\Scripts\python.exe scripts/download_assets.py
+.\.venv\Scripts\python.exe scripts/verify_project.py --inference --device cpu
 .\.venv\Scripts\python.exe -m unittest discover -s tests -v
 ```
 
-缺少研究资产时，核心测试正常运行；需要真实数据及权重的集成测试会明确显示跳过。下面的识别、训练和完整评估命令面向已经备齐研究资产的环境。
+下载脚本默认恢复四个包，约296MiB下载量、448MiB展开空间；已存在且相同的文件会跳过，不同文件默认拒绝覆盖。只看模型结构和运行核心测试时可以省略资产下载；实际识别、训练和完整评估使用配套资产。
+
+![验证集示例：模型预测与数据集GT](https://github.com/HZX561/DripLink/releases/download/v0.1.0/prediction_vs_gt.jpg)
+
+GT来自数据集标签，尚未人工复核；示例分类比例不代表整体准确率。
 
 ## 当前结果
 
@@ -57,6 +70,7 @@ data/provenance/          原始标注及划分来源记录
 data/collection/          新照片采集模板
 reports/                  验证、历史测试、训练、人工核对和维护记录
 scripts/                  完整性检查、模型选优、照片核对导出、日志工具
+assets/release.json       Release资源目录、下载地址和SHA256
 tests/                    当前流程的回归检查
 docs/                     实验、人工任务和文件管理说明
 runs/                     今后新训练生成，每次使用新的实验名

@@ -1,6 +1,6 @@
 # 实验结果说明
 
-公开仓库仅保留本说明与 `metrics.json` 汇总指标。照片、预测逐图记录、人工复核表、个人目录路径和本机环境日志保留在维护者本地，不上传 GitHub。
+源码仓库保留本说明与 `metrics.json` 汇总指标。完整验证/历史测试逐图结果、训练记录、核对照片及预测示例通过 [v0.1.0 Release](https://github.com/HZX561/DripLink/releases/tag/v0.1.0) 的 `driplink-reports-v0.1.0.zip` 提供。
 
 | 划分 | 图片数 | 整数准确率 | 完整读数准确率 |
 |---|---:|---:|---:|
@@ -9,4 +9,4 @@
 
 真值来自数据集标签，未完成独立人工复核。测试图片曾在之前的研发实验中查看过，因此结果属于内部历史复测，不是全新盲测或实体独立测试。
 
-本地 `validation/`、`historical_test/`、`training/`、`review/`、`examples/`、`verification/`、`maintenance/` 等目录不随源码发布。复测完整结果需要 [研究资产](../docs/REPRODUCIBILITY.md)，公开核心测试并不验证这里的识别准确率。
+下载后得到 `validation/`、`historical_test/`、`training/`、`review/` 和 `examples/`。机器安装日志、维护日志和GitHub登录操作记录保留本地。复测步骤见 [复现说明](../docs/REPRODUCIBILITY.md)，公开核心测试本身并不验证这里的识别准确率。
