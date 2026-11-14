@@ -25,13 +25,15 @@
 
 公开指标由固定 GPU 环境产生，CPU 与 GPU 的浮点计算可能带来少量差异。对齐原复测环境时应使用 CUDA 锁文件及记录的硬件环境。选定权重、数据清单和软件版本均需一并核对。
 
-手动从Release下载四个ZIP后，也可以离线恢复：
+手动从Release下载models、data、reports三个ZIP，以及cache的`.001`、`.002`、`.003`三个分片后，也可以离线恢复：
 
 ```powershell
 .\.venv\Scripts\python.exe scripts/download_assets.py --local-archives 'C:\path\to\downloaded-zips'
 ```
 
 脚本校验压缩包大小和SHA256，拒绝越界路径、符号链接和不同内容的已有文件；只有明确传入 `--overwrite` 才会替换不同的工作副本。只需要单图识别时可下载 `--bundles models`，配自己的全指针照片使用。复测、完整集成测试和继续训练建议下载四个包。
+
+cache分片各自有SHA256，下载后自动按顺序合并为完整ZIP，再校验完整ZIP哈希；网络中断后已经校验完成的分片会复用。
 
 cache包可省略，再运行 `prepare_data.py --rebuild-cache --device cpu` 重建，但将增加准备时间。data包已经包含当前全部原图，原始OneDrive下载包及作者检查点不随当前实验包发布。
 

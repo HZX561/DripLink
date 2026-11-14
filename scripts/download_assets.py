@@ -23,6 +23,23 @@ def check_archive(path,info):
         raise ValueError('Archive checksum/size mismatch: '+Path(path).name)
 
 
+def assemble(info,directory):
+    """Join independently verified parts and verify the original ZIP checksum."""
+    directory=Path(directory);path=directory/info['name']
+    if path.is_file():check_archive(path,info);return path
+    if sum(p['bytes'] for p in info['parts'])!=info['bytes']:raise ValueError('Part sizes do not match archive size')
+    for part in info['parts']:check_archive(directory/part['name'],part)
+    temporary=path.with_name(path.name+'.assembling')
+    try:
+        with temporary.open('wb') as output:
+            for part in info['parts']:
+                with (directory/part['name']).open('rb') as source:shutil.copyfileobj(source,output,1024*1024)
+        check_archive(temporary,info);temporary.replace(path)
+    finally:
+        if temporary.exists():temporary.unlink()
+    return path
+
+
 def restore(path,info,destination,kind,overwrite=False):
     """Validate every destination before writing; refuse conflicting local files by default."""
     check_archive(path,info);destination=Path(destination).resolve();destination.mkdir(parents=True,exist_ok=True)
@@ -95,8 +112,14 @@ def main():
     for kind in args.bundles:
         info=index['bundles'][kind];print(f'{kind}: {info["bytes"]/2**20:.2f} MiB',flush=True)
         if args.local_archives:
-            archive=args.local_archives/info['name'];check_archive(archive,info)
-        else:archive=download(info,args.destination/'.runtime/downloads',urls.get(info['name']))
+            if info.get('parts'):archive=assemble(info,args.local_archives)
+            else:archive=args.local_archives/info['name'];check_archive(archive,info)
+        else:
+            cache=args.destination/'.runtime/downloads'
+            if info.get('parts'):
+                for part in info['parts']:download(part,cache,urls.get(part['name']))
+                archive=assemble(info,cache)
+            else:archive=download(info,cache,urls.get(info['name']))
         if args.download_only:print('Verified:',archive,flush=True)
         else:print(f'Restored {restore(archive,info,args.destination,kind,args.overwrite)} files.',flush=True)
 

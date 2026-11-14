@@ -6,7 +6,7 @@ import tempfile
 import unittest
 import zipfile
 
-from scripts.download_assets import restore,ROOT
+from scripts.download_assets import restore,assemble,ROOT
 
 
 class AssetRestoreTests(unittest.TestCase):
@@ -52,6 +52,21 @@ class AssetRestoreTests(unittest.TestCase):
         entry.external_attr=(stat.S_IFLNK|0o777)<<16
         path,info=self.archive([(entry,b'../../outside')])
         with self.assertRaisesRegex(ValueError,'Unsafe archive member'):restore(path,info,self.root/'project','models')
+
+    def test_verified_parts_reassemble_exact_archive(self):
+        raw=b'first-part-and-second-part'
+        parts=[]
+        for number,chunk in enumerate((raw[:10],raw[10:]),1):
+            path=self.root/f'bundle.zip.{number:03d}';path.write_bytes(chunk)
+            parts.append({'name':path.name,'bytes':len(chunk),'sha256':hashlib.sha256(chunk).hexdigest()})
+        info={'name':'bundle.zip','bytes':len(raw),'sha256':hashlib.sha256(raw).hexdigest(),'parts':parts}
+        self.assertEqual(assemble(info,self.root).read_bytes(),raw)
+
+    def test_bad_part_does_not_create_joined_archive(self):
+        path=self.root/'bundle.zip.001';path.write_bytes(b'corrupt')
+        info={'name':'bundle.zip','bytes':7,'sha256':'0'*64,'parts':[{'name':path.name,'bytes':7,'sha256':'0'*64}]}
+        with self.assertRaisesRegex(ValueError,'checksum'):assemble(info,self.root)
+        self.assertFalse((self.root/'bundle.zip').exists())
 
 
 if __name__=='__main__':unittest.main()

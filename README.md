@@ -21,7 +21,7 @@ flowchart LR
 |---|---|---:|
 | `driplink-models-v0.1.0.zip` | 当前检测器、读数网络、选优配置及来源记录 | 22.24 MiB |
 | `driplink-data-v0.1.0.zip` | 3780张全指针原图、完整标注、固定划分及来源清单 | 81.79 MiB |
-| `driplink-cache-v0.1.0.zip` | GT裁剪、训练/验证检测裁剪及训练目标 | 188.55 MiB |
+| `driplink-cache-v0.1.0.zip.001–003` | GT裁剪、训练/验证检测裁剪及训练目标，脚本自动合并 | 188.55 MiB |
 | `driplink-reports-v0.1.0.zip` | 验证、历史测试、训练记录与照片核对材料 | 3.74 MiB |
 
 提供 SHA256 清单及自动下载校验脚本。数据来源和适用条件见 [第三方说明](docs/THIRD_PARTY_NOTICES.md)；文件清单与复现步骤见 [复现说明](docs/REPRODUCIBILITY.md)。

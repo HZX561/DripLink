@@ -32,7 +32,26 @@
       "bytes": 197714190,
       "files": 8,
       "unpacked_bytes": 310374075,
-      "url": "https://github.com/HZX561/DripLink/releases/download/v0.1.0/driplink-cache-v0.1.0.zip"
+      "parts": [
+        {
+          "name": "driplink-cache-v0.1.0.zip.001",
+          "sha256": "41befcf02cfcc2dc74dc44392b82757704ad0a92875be58b715e12080ee111f9",
+          "bytes": 67108864,
+          "url": "https://github.com/HZX561/DripLink/releases/download/v0.1.0/driplink-cache-v0.1.0.zip.001"
+        },
+        {
+          "name": "driplink-cache-v0.1.0.zip.002",
+          "sha256": "415225e3fbfd93dd6a8d56a61b56f95a98d9c02c91002d091f57d9202f4eec01",
+          "bytes": 67108864,
+          "url": "https://github.com/HZX561/DripLink/releases/download/v0.1.0/driplink-cache-v0.1.0.zip.002"
+        },
+        {
+          "name": "driplink-cache-v0.1.0.zip.003",
+          "sha256": "550be433d9d4da5506986a79f8e0e0d85d3bb567e4c45760143bbffff0ed82bd",
+          "bytes": 63496462,
+          "url": "https://github.com/HZX561/DripLink/releases/download/v0.1.0/driplink-cache-v0.1.0.zip.003"
+        }
+      ]
     },
     "reports": {
       "name": "driplink-reports-v0.1.0.zip",

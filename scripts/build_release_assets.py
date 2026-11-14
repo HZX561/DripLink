@@ -57,13 +57,23 @@ def build(output,tag=TAG):
         info={'name':name,'sha256':sha256(archive),'bytes':archive.stat().st_size,'files':len(paths)+1,
               'unpacked_bytes':sum(p.stat().st_size for p in paths)+len(note.encode()),
               'url':f'https://github.com/HZX561/DripLink/releases/download/{tag}/{name}'}
+        if kind=='cache' and info['bytes']>64*2**20:
+            info.pop('url');info['parts']=[]
+            with archive.open('rb') as source:
+                number=0
+                while chunk:=source.read(64*2**20):
+                    number+=1;part=output/f'{name}.{number:03d}';part.write_bytes(chunk)
+                    info['parts'].append({'name':part.name,'sha256':sha256(part),'bytes':part.stat().st_size,
+                        'url':f'https://github.com/HZX561/DripLink/releases/download/{tag}/{part.name}'})
         catalog['bundles'][kind]=info
         print(f'{kind}: {info["files"]} files, {info["bytes"]/2**20:.2f} MiB; CRC passed',flush=True)
     preview=output/'prediction_vs_gt.jpg';preview.write_bytes((ROOT/'reports/examples/prediction_vs_gt.jpg').read_bytes())
     catalog['preview']={'name':preview.name,'sha256':sha256(preview),'bytes':preview.stat().st_size,
                         'url':f'https://github.com/HZX561/DripLink/releases/download/{tag}/{preview.name}'}
     (output/'release.json').write_text(json.dumps(catalog,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
-    checks=[output/info['name'] for info in catalog['bundles'].values()]+[preview,output/'release.json']
+    checks=[output/info['name'] for info in catalog['bundles'].values()]
+    checks += [output/p['name'] for info in catalog['bundles'].values() for p in info.get('parts',[])]
+    checks += [preview,output/'release.json']
     (output/'SHA256SUMS.txt').write_text(''.join(f'{sha256(p)}  {p.name}\n' for p in checks),encoding='utf-8')
     return catalog
 
