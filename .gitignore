@@ -1,0 +1,32 @@
+# Local environments and tooling
+.venv/
+__pycache__/
+*.py[cod]
+*.cache
+.runtime/
+.venv-wmeter/
+.vscode/
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Publish documentation/templates, keep all research assets local.
+data/*
+!data/README.md
+!data/collection/
+data/collection/*
+!data/collection/independent.json
+!data/collection/sample.example.json
+models/*
+!models/README.md
+reports/*
+!reports/README.md
+!reports/metrics.json
+*.pt
+*.pth
+*.pkl
+*.npy
+*.zip
+runs/

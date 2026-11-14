@@ -1,0 +1,52 @@
+{
+  "project": "DripLink",
+  "scope": "full_pointer",
+  "decoder": "context",
+  "confidence": 0.15,
+  "data": {
+    "manifest_sha256": "ddd23a9f10c88420e2b90824bebf4fea6f18ed27e698962cc573fa005f168486",
+    "train": 2601,
+    "val": 607,
+    "historical_test": 572,
+    "near_duplicate_groups": 463
+  },
+  "weights": {
+    "detector_sha256": "6d245b126e0beebdf63ba55d6189a21eae2c46ad5ddc237e24e920caaab56efb",
+    "reader_sha256": "476527196873338ec6b26eba544815c2b86a1a27bfeba78de8648943e5676f76",
+    "reader_parameters": 953194
+  },
+  "metrics": {
+    "validation": {
+      "images": 607,
+      "returned_readings": 607,
+      "coverage": 1.0,
+      "integer_correct": 570,
+      "integer_exact": 0.9390444810543658,
+      "full_correct": 480,
+      "full_exact": 0.7907742998352554,
+      "mae_m3_on_returned": 242.79968023064248,
+      "median_absolute_error_m3_on_returned": 0.0,
+      "failed_images_count_as_incorrect": true
+    },
+    "historical_test": {
+      "images": 572,
+      "returned_readings": 572,
+      "coverage": 1.0,
+      "integer_correct": 518,
+      "integer_exact": 0.9055944055944056,
+      "full_correct": 452,
+      "full_exact": 0.7902097902097902,
+      "mae_m3_on_returned": 2104.5676886363635,
+      "median_absolute_error_m3_on_returned": 0.0,
+      "failed_images_count_as_incorrect": true
+    }
+  },
+  "test_previously_evaluated": true,
+  "new_independent_evaluation_available": false,
+  "limitations": [
+    "Dataset-provided reading labels, not newly human verified.",
+    "Historical internal test previously inspected during development; not a new blind test.",
+    "Near-duplicate grouping does not establish physical meter independence.",
+    "Data and checkpoints are not distributed in this source release."
+  ]
+}

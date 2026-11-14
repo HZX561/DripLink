@@ -1,0 +1,3 @@
+# Default: Windows x64 / CPython 3.11 / CPU, with pinned wheel hashes.
+# For NVIDIA CUDA 12.4 use requirements-win-cu124.lock instead.
+-r requirements-win-cpu.lock

@@ -1,0 +1,8 @@
+{
+  "dataset_id": "new_full_pointer_meters",
+  "unseen_physical_meters_confirmed": false,
+  "frozen_before_evaluation": false,
+  "confirmed_by": "",
+  "collection_notes": "尚未采集独立照片，不能据此报告独立准确率。",
+  "samples": []
+}

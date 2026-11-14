@@ -1,0 +1,9 @@
+{
+  "image": "private/images/meter001_001.jpg",
+  "meter_id": "meter001",
+  "session_id": "session001",
+  "captured_at": "替换成实际拍摄时间及所在时区",
+  "reading": "1234.5678",
+  "verified_by": ["人工核验员甲", "人工核验员乙"],
+  "notes": "仅为格式示例，数字不是任何现有照片的真值。"
+}
