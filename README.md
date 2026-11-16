@@ -141,6 +141,10 @@ Windows x64、Python 3.11。当前 GPU 环境为 `.venv-wmeter`（PyTorch 2.5.1+
 
 独立评估需要新实体水表照片和人工读数，模板目前为空，参见 [人工任务与采集说明](docs/HUMAN_TASKS.md)。清理范围和备份位置见 [文件管理](docs/FILE_MANAGEMENT.md)。
 
+## 网页演示
+
+网页演示提供上传识别、倍率框、历史记录和读数核验。在项目环境安装 `webapp/requirements.txt` 后，运行 `python webapp/run.py`，访问 `http://127.0.0.1:5001`。操作说明见 [网页说明](webapp/README.txt)，本次功能与旋转检查见 [网页检查记录](docs/WEBAPP_REVIEW.md)。
+
 ## 许可证与致谢
 
 本项目源码采用 **GNU AGPL-3.0-only**，见 [LICENSE](LICENSE)。项目使用的 Ultralytics 同样提供 AGPL-3.0 版本；第三方组件及数据的权利仍按各自许可处理，见 [第三方来源说明](docs/THIRD_PARTY_NOTICES.md)。

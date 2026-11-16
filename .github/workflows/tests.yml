@@ -21,10 +21,14 @@ jobs:
           python-version: '3.11'
           architecture: x64
           cache: pip
-          cache-dependency-path: requirements-win-cpu.lock
+          cache-dependency-path: |
+            requirements-win-cpu.lock
+            webapp/requirements.txt
       - name: Install locked CPU dependencies
         run: |
           python -m pip install --require-hashes --only-binary=:all: -r requirements-win-cpu.lock
+      - name: Install dashboard dependencies
+        run: python -m pip install -r webapp/requirements.txt
       - name: Check dependencies
         run: python -m pip check
       - name: Check environment

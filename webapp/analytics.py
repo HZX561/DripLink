@@ -1,4 +1,4 @@
-"""Conservative consumption analysis. Predictions never count as confirmed usage."""
+"""Consumption analysis of records marked confirmed."""
 from datetime import datetime,timezone
 from decimal import Decimal
 

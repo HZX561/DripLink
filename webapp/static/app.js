@@ -53,13 +53,13 @@
     return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleString('zh-CN', { hour12: false });
   }
   function sourceLabel(source) {
-    return ({ sample: 'sample · 测试样本', manual: 'manual · 手动上传（测试）', device: 'device · 设备自动计入' })[source] || (source ? String(source) : '未提供来源');
+    return ({ sample: 'sample · 测试样本', manual: 'manual · 手动上传（测试）', device: 'device · 设备上传' })[source] || (source ? String(source) : '未提供来源');
   }
   function isSample(record) { return record && (record.status === 'sample' || record.source === 'manual' || record.source === 'sample'); }
   function statusInfo(record) {
     if (isSample(record)) return ['测试样本 · 不统计', 'sample'];
     if (record.status === 'confirmed') return ['已计入统计', 'confirmed'];
-    return ['设备记录 · 已计入统计', 'confirmed'];
+    return ['待人工核验', 'pending'];
   }
   function toast(message, danger = false) {
     clearTimeout(state.toastTimer);
@@ -116,6 +116,7 @@
     $('meter-id').disabled = state.uploading || state.mutating;
     $('meter-form').querySelector('button').disabled = state.uploading || state.mutating;
     $('delete-submit').disabled = !state.csrf || state.mutating;
+    $('confirm-reading-submit').disabled = !state.csrf || state.mutating || state.uploading;
     for (const button of document.querySelectorAll('[data-mutation]')) button.disabled = !state.csrf || state.mutating || state.uploading;
     let hint = '手动上传为测试样本，不计入统计；设备读数自动计入统计。';
     if (state.uploading) hint = '正在上传并推理。请保持页面开启，勿重复提交。';
@@ -143,7 +144,7 @@
       const device = plain(data.device) || '未提供运行设备';
       if (!ready) setMessage('service-banner', `模型未就绪 · ${plain(data.model_error) || '服务端未报告详细原因，请检查模型权重与运行环境。'}`, 'error');
       else if (!state.csrf) setMessage('service-banner', `模型已就绪 · ${model} / ${device}。但缺少 CSRF 安全令牌，写入操作已禁用。`, 'warning');
-      else setMessage('service-banner', `模型已就绪 · ${model} / ${device}。设备读数自动计入统计，手动上传为测试样本。`, 'success');
+      else setMessage('service-banner', `模型已就绪 · ${model} / ${device}。设备读数通过质量检查后计入统计，手动上传保存为测试样本。`, 'success');
       empty($('meter-options'));
       if (Array.isArray(data.meters)) {
         for (const meter of data.meters) {
@@ -282,6 +283,7 @@
 
   function renderResult(record) {
     state.record = record;
+    $('confirm-reading-form').hidden = !record || record.status !== 'pending';
     $('result-empty').hidden = !!record;
     $('result-content').hidden = !record;
     if (!record) { text('result-state', '等待上传'); $('result-state').className = 'tag subtle'; $('result-image').removeAttribute('src'); return; }
@@ -314,9 +316,14 @@
     if (isSample(record)) {
       text('review-state-label', '测试样本 · 不计入统计');
       text('review-state-help', '手动上传仅用于检验识别模型，不参与用水统计。');
+    } else if (record.status === 'pending') {
+      text('review-state-label', '待人工核验');
+      text('review-state-help', '请对照原图填写实际读数，确认后计入统计。');
+      $('confirmed-reading').value = reading(record.predicted_reading);
+      $('confirm-reading-error').hidden = true;
     } else {
-      text('review-state-label', `已自动计入统计 · ${reading(record.confirmed_reading)} m³`);
-      text('review-state-help', '设备读数已自动计入统计；如读数有误，可删除该记录后重新采集。');
+      text('review-state-label', `已计入统计 · ${reading(record.confirmed_reading)} m³`);
+      text('review-state-help', '可对照原图核查读数。');
     }
     showImage('original');
     updateActions();
@@ -433,6 +440,30 @@
       await Promise.all([loadRecords(), loadAnalytics()]);
     } catch (error) { text('delete-error', error.message); $('delete-error').hidden = false; }
     finally { state.mutating = false; updateActions(); }
+  }
+
+  async function submitConfirmation(event) {
+    event.preventDefault();
+    if (state.mutating || !state.record || state.record.status !== 'pending') return;
+    state.mutating = true;
+    updateActions();
+    $('confirm-reading-error').hidden = true;
+    try {
+      const response = await api(`/api/records/${encodeURIComponent(state.record.id)}/confirm`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reading: $('confirmed-reading').value })
+      });
+      renderResult(validRecord(response));
+      toast('已确认读数并更新统计。');
+      await Promise.all([loadRecords(), loadAnalytics()]);
+    } catch (error) {
+      text('confirm-reading-error', error.message);
+      $('confirm-reading-error').hidden = false;
+    } finally {
+      state.mutating = false;
+      updateActions();
+    }
   }
 
   function svgElement(tag, attributes = {}, content) {
@@ -745,6 +776,7 @@
   $('show-original').addEventListener('click', () => showImage('original'));
   $('show-result').addEventListener('click', () => showImage('result'));
   $('delete-form').addEventListener('submit', submitDeletion);
+  $('confirm-reading-form').addEventListener('submit', submitConfirmation);
   for (const button of document.querySelectorAll('[data-close-dialog]')) button.addEventListener('click', () => { if (!state.mutating) $(button.dataset.closeDialog).close(); });
   $('delete-dialog').addEventListener('cancel', (event) => { if (state.mutating) event.preventDefault(); });
   $('record-filter').addEventListener('change', renderRecords);

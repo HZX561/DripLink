@@ -12,7 +12,6 @@ def main():
     parser.add_argument('--port',type=int,default=5001)
     parser.add_argument('--data-dir',type=Path)
     args=parser.parse_args()
-    if args.port==5000:parser.error('Port5000 reserved for original project; use5001')
     from webapp.app import create_app
     app=create_app({'INSTANCE_DIR':str(args.data_dir.resolve())} if args.data_dir else None)
     try:

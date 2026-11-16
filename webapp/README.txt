@@ -2,14 +2,15 @@
 
 一、现在使用
 本机打开 http://127.0.0.1:5001。上传单块全指针式水表照片，查看候选读数、独立/联合识读、倍率框、原图与识读提示。
-手动上传即为测试样本，不计入统计；树莓派上传的读数自动计入统计，可按需删除异常记录。
+手动上传保存为测试样本。设备读数通过质量检查后计入统计，带漏检、模糊等提示的记录进入待核验，可在识别结果页填写人工读数并确认。
 历史按meter_id隔离；一块实体水表使用固定编号，换表应更换编号。
 目前建议与预警是透明规则，不是接入外部大模型；不能由高用量直接确诊漏水。
 
 二、启动
 当前电脑：
-& 'C:/Users/asus/AppData/Local/Programs/Python/Python311/python.exe' -B 'D:/DripLink-main/webapp/run.py'
-默认CPU和5001，不占旧网站5000。Waitress单独安装在webapp/vendor，不改共享依赖或原锁文件。
+.\.venv\Scripts\python.exe -m pip install -r webapp/requirements.txt
+.\.venv\Scripts\python.exe webapp/run.py
+默认使用CPU和5001端口。网页依赖列在webapp/requirements.txt，研究环境锁文件继续管理模型依赖。
 新电脑先按原README配置模型环境，再 python -m pip install -r webapp/requirements.txt；模型下载仅需 python scripts/download_assets.py --bundles models。
 网站SQLite和照片位于webapp/instance，不在原项目数据库。
 安全文件webapp/instance/device_token.txt/session_key.txt不得上传Git、聊天或公开网盘。
@@ -19,7 +20,7 @@
 本机联调时默认只监听127.0.0.1，树莓派不能访问该地址。硬件接入时显式 --host 0.0.0.0；Windows防火墙仅允许树莓派IP访问5001。管理页面仍仅本机可见，远程管理使用SSH隧道；不要直接暴露公网。
 客户端见pi_client/README.txt、uploader.py、systemd service/timer。默认每小时，失败重试同upload_id，网络中断保留队列，重传不重复记账。
 Token本地从webapp/instance/device_token.txt取值，设备端仅通过环境变量DRIPLINK_DEVICE_TOKEN使用；生产使用HTTPS/VPN并轮换Token。
-设备自动记录已计入统计，但仍建议定期人工抽查异常记录并删除。
+质量检查通过的设备记录自动计入统计。待核验记录在确认读数后加入统计。
 
 四、多角度能力
 模型能预测表盘四角，再做透视矫正；训练入口包含旋转增强，但这不保证所有角度可靠。
@@ -43,7 +44,7 @@ webapp/evidence含实际网站接口结果、页面截图和旋转测试。测�
 
 1. 模型漏检：检测到的倍率位中间有缺口时判定。例如只检出 10^3、10^-1、10^-2、10^-3，
    缺 10^2/10^1/10^0，会让整数部分整体变成 0（曾把 1307.3177 报成 0.2670）。
-   程序会自动用已检出框估计表盘范围、放大 1.6/2.2 倍重检并合并结果，多数情况能补齐。
+   检测序列有缺口、整数盘偏少或完全未检出时，先用1024输入重检，再按需在扩大区域内重检。重检后继续执行质量检查。
 2. 照片模糊：整图清晰度低于 90（正常≈180以上）。注意必须在整图上算，
    裁到表盘再算会被高对比度掩盖，测不出模糊。
 3. 画面偏暗：表盘区域平均亮度低于 60。
@@ -54,7 +55,7 @@ webapp/evidence含实际网站接口结果、页面截图和旋转测试。测�
 8. 识别彻底失败时，错误信息会带上最可能的原因，例如“照片偏模糊……请对焦后重拍”。
 
 阈值集中在 webapp/adapter.py 顶部（BLUR_BELOW 等），按实际设备可调。
-这些阈值是用发布数据集 40 张训练图校准的，正常图片误报为 0；模糊提示用人工加模糊验证过。
+这些值是图像质量提示的经验阈值，可结合有人工核验读数的采集样本调整。
 
 八、双平台（管理员 / 用户）与账号权限
 网站按登录角色切换两个视角，共用同一套服务，数据按归属隔离：
@@ -78,7 +79,7 @@ DRIPLINK_ALLOW_REMOTE=1（配合 SSH 隧道 / 可信局域网，勿直接暴露�
     python -B webapp/manage_users.py add-user   bob
     python -B webapp/manage_users.py list
 密码可用环境变量 DRIPLINK_NEW_PASSWORD 传入或交互输入；只存加盐散列，不存明文。
-示例演示账号（首次演示用，正式部署前请删除或改密）：demo / demo1234。
+演示账号通过上述管理脚本创建并设置密码。
 
 九、设备离线与用水异常预警
 1. 设备离线：依据每台设备的最近一次上传/心跳时间与“采样间隔 × 离线宽限倍数”判断。
@@ -91,5 +92,5 @@ DRIPLINK_ALLOW_REMOTE=1（配合 SSH 隧道 / 可信局域网，勿直接暴露�
    如需真正 AI 建议可后续接入服务端大模型适配器（密钥仅在服务端，输入只用统计读数）。
 
 采集设备凭证：新增设备时明文只显示一次，服务端仅存 SHA-256 摘要；
-设备上传可用 device_id + 自己的凭证（不共享全局 token），所属水表由服务端从设备绑定关系决定，
+设备上传可用自己的凭证，也可同时提供device_id。树莓派客户端的DRIPLINK_DEVICE_TOKEN可直接配置该设备凭证。所属水表由服务端从设备绑定关系决定，
 设备无法伪装成其他水表。

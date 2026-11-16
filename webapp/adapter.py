@@ -16,8 +16,7 @@ def has_gap(regions):
     slots=sorted({int(r['cls']) for r in regions})
     return bool(slots) and len(slots)!=(slots[-1]-slots[0]+1)
 
-# Thresholds calibrated on the released 320x240 pointer dataset (n=60):
-# sharpness p1=178, mean p1=125, std p1=54, clipped-white p99=0.
+# Heuristic image-quality thresholds, adjustable using labeled capture samples.
 BLUR_BELOW=90.0
 DARK_BELOW=60.0
 OVEREXPOSED_CLIP=0.10
@@ -54,7 +53,7 @@ def assess_image(image,regions):
     mean=float(subject.mean());contrast=float(subject.std())
     clipped=float((subject>=250).mean())
     if sharpness<BLUR_BELOW:
-        issues.append({'code':'blur','message':f'照片偏模糊（清晰度{sharpness:.0f}，参考正常≈180以上）；指针位置可能判错，请对焦后重拍。'})
+        issues.append({'code':'blur','message':f'照片偏模糊（清晰度{sharpness:.0f}）；指针位置可能判错，请对焦后重拍。'})
     if mean<DARK_BELOW:
         issues.append({'code':'dark','message':f'画面偏暗（平均亮度{mean:.0f}）；容易看不清指针，请补光后重拍。'})
     if clipped>OVEREXPOSED_CLIP or mean>WASHED_ABOVE:
@@ -123,20 +122,28 @@ class ReaderAdapter:
                 raise ModelUnavailable(self._error) from exc
         return self._reader
 
-    def _detect(self,reader,image):
+    def _detect(self,reader,image,imgsz=512):
         from watermeter.pipeline import regions_from_result
-        result=reader.detector.predict(image,device=str(reader.device),imgsz=512,conf=DETECT_CONF,iou=.5,
+        result=reader.detector.predict(image,device=str(reader.device),imgsz=imgsz,conf=DETECT_CONF,iou=.5,
                                          agnostic_nms=True,verbose=False,save=False,half=reader.device.type=='cuda',rect=False)[0]
         return regions_from_result(result)
 
     def detect_with_retry(self,reader,image):
-        """Detect, and if the multiplier sequence has holes, retry on a zoomed crop."""
+        """Retry sparse detections at higher resolution and on expanded dial crops."""
         regions=self._detect(reader,image)
         recovered=False
-        if has_gap(regions):
+        integer_count=sum(int(r['cls'])<6 for r in regions)
+        if has_gap(regions) or integer_count<3:
             best=regions
+            # Includes empty detections and complete loss of the integer dials.
+            higher_resolution=self._detect(reader,image,imgsz=1024)
+            merged=merge_regions(best,higher_resolution)
+            if len(merged)>len(best):
+                best=merged;recovered=True
+            if not best:return best,recovered
             for factor in RETRY_SCALES:
-                box=crop_around(regions,image.shape,factor)
+                if not has_gap(best) and sum(int(r['cls'])<6 for r in best)>=3:break
+                box=crop_around(best,image.shape,factor)
                 if box is None:break
                 left,top,right,bottom=box
                 zoomed=self._detect(reader,image[top:bottom,left:right])
@@ -145,7 +152,6 @@ class ReaderAdapter:
                 merged=merge_regions(best,zoomed)
                 if len(merged)>len(best):
                     best=merged;recovered=True
-                if not has_gap(best):break
             regions=best
         return regions,recovered
 

@@ -130,6 +130,7 @@ def create_app(config=None,recognizer=None):
         return rows
     def visible_meter_ids(user=None):
         user=user or current_user()
+        if user is None:return []
         if user.get('role')=='admin':
             with connect() as conn:return [r[0] for r in conn.execute('SELECT id FROM meters ORDER BY id')]
         if user.get('id') is None:return []
@@ -236,7 +237,12 @@ def create_app(config=None,recognizer=None):
                 with connect() as conn:device=conn.execute('SELECT * FROM devices WHERE id=?',(device_id,)).fetchone()
                 if not device or not device['active'] or not hmac.compare_digest(hashlib.sha256(raw.encode()).hexdigest(),device['token_hash']):return jsonify(error='设备鉴权失败'),401
                 request.environ['drip_link_device']=dict(device)
-            elif not hmac.compare_digest(raw,app.config['DEVICE_TOKEN']):return jsonify(error='设备鉴权失败'),401
+            else:
+                with connect() as conn:device=conn.execute('SELECT * FROM devices WHERE token_hash=?',(hashlib.sha256(raw.encode()).hexdigest(),)).fetchone()
+                if device:
+                    if not device['active']:return jsonify(error='设备鉴权失败'),401
+                    request.environ['drip_link_device']=dict(device)
+                elif not hmac.compare_digest(raw,app.config['DEVICE_TOKEN']):return jsonify(error='设备鉴权失败'),401
             return None
         if not app.testing and not ALLOW_REMOTE:
             if not is_loopback():return jsonify(error='管理界面仅允许本机访问；远程管理请使用SSH隧道'),403
@@ -265,6 +271,11 @@ def create_app(config=None,recognizer=None):
     @app.get('/media/<filename>')
     def get_media(filename):
         if not re.fullmatch(r'[a-f0-9]{32}_(original|result)\.jpg',filename):return jsonify(error='图片不存在'),404
+        user=require_auth()
+        with connect() as conn:
+            row=conn.execute('SELECT meter_id FROM records WHERE original_name=? OR result_name=?',(filename,filename)).fetchone()
+        if row is None:return jsonify(error='图片不存在'),404
+        if not can_access_meter(row['meter_id'],user):raise PermissionError('无权查看该水表')
         return send_from_directory(media,filename)
     @app.get('/api/status')
     def status():
@@ -274,7 +285,7 @@ def create_app(config=None,recognizer=None):
         with connect() as conn:registered=[r[0] for r in conn.execute('SELECT id FROM meters ORDER BY id')]
         visible=visible_meter_ids(user)
         meters=sorted(set(all_meters)|set(registered)|set(visible))
-        if user.get('role')!='admin':meters=visible
+        if user is None or user.get('role')!='admin':meters=visible
         me={'role':user.get('role'),'username':user.get('username'),'display_name':user.get('display_name'),'legacy':bool(user.get('legacy'))} if user else None
         return jsonify(**reader.availability(),device_upload_auth_required=True,advice_mode='rules',csrf_token=session['csrf_token'],meters=meters,me=me,allow_remote=ALLOW_REMOTE)
     @app.get('/api/device-info')
@@ -329,11 +340,16 @@ def create_app(config=None,recognizer=None):
                 ok,encoded=cv2.imencode('.jpg',pixels)
                 if not ok:raise OSError('图片保存失败')
                 target=media/name;names.append(target);target.write_bytes(encoded.tobytes())
-            state='confirmed' if device else 'sample'
-            confirmed_value=predicted if device else None
+            quality=prediction.get('quality','ok')
+            flags=prediction.get('image_flags',[])
+            needs_review=quality!='ok' or bool(flags) or bool(prediction.get('recovered'))
+            state=('pending' if needs_review else 'confirmed') if device else 'sample'
+            confirmed_value=predicted if state=='confirmed' else None
             alerts=list(prediction['warnings'])
-            alerts.append('设备读数已自动计入用水统计，请按需人工核查并删除异常记录。' if device else '手动上传按测试样本处理，用于检验识别模型，不计入用水统计。')
-            quality=prediction.get('quality','ok');image_flags=json.dumps(prediction.get('image_flags',[]))
+            if state=='pending':alerts.append('图像质量提示或重检补盘结果需要核验，人工确认读数后计入统计。')
+            elif device:alerts.append('设备读数已自动计入用水统计，请按需人工核查并删除异常记录。')
+            else:alerts.append('手动上传按测试样本处理，用于检验识别模型，不计入用水统计。')
+            image_flags=json.dumps(flags)
             with connect() as conn:
                 cur=conn.execute('INSERT INTO records (meter_id,captured_at,received_at,source,predicted_reading,context_reading,independent_reading,confirmed_reading,status,warnings,detected_regions,original_name,result_name,upload_id,content_hash,quality,image_flags) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',(key,captured,utc_time(),'device' if device else 'manual',predicted,context,independent,confirmed_value,state,json.dumps(alerts,ensure_ascii=False),prediction['detected_regions'],original_name,result_name,upload_id,digest,quality,image_flags));new_id=cur.lastrowid
             return jsonify(record=lookup(new_id),record_id=new_id,status=state),201
@@ -351,6 +367,19 @@ def create_app(config=None,recognizer=None):
     def predict():return ingest()
     @app.post('/api/device/upload')
     def device_upload():return ingest(True)
+    @app.post('/api/records/<int:record_id>/confirm')
+    def confirm_record(record_id):
+        user=require_auth()
+        data=request.get_json(silent=True)
+        if not isinstance(data,dict):raise ValueError('需要JSON对象')
+        value=reading_text(data.get('reading'))
+        with connect() as conn:
+            row=conn.execute('SELECT * FROM records WHERE id=?',(record_id,)).fetchone()
+            if row is None:return jsonify(error='记录不存在'),404
+            if not can_access_meter(row['meter_id'],user,write=True):raise PermissionError('无权确认该水表的读数')
+            if row['status']!='pending':return jsonify(error='该记录无需待审核确认'),409
+            conn.execute("UPDATE records SET confirmed_reading=?,status='confirmed' WHERE id=?",(value,record_id))
+        return jsonify(record=lookup(record_id))
     @app.post('/api/records/<int:record_id>/delete')
     def delete(record_id):
         user=require_auth()

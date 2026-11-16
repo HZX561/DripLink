@@ -65,6 +65,19 @@ class WebTests(unittest.TestCase):
     def test_device_capture_time_equivalent_timezones(self):
         self.assertEqual(self.device().status_code,201)
         self.assertEqual(self.device(time='2026-01-01T08:00:00+08:00').status_code,200)
+    def test_flagged_device_readings_wait_for_confirmation(self):
+        for index,(quality,flags,recovered) in enumerate([('incomplete',[],False),('ok',['blur'],False),('ok',[],True)]):
+            result=FakeReader().predict(np.zeros((128,128,3),np.uint8))
+            result.update(quality=quality,image_flags=flags,recovered=recovered)
+            with patch.object(self.reader,'predict',return_value=result):response=self.device(upload=f'flagged_{index}')
+            self.assertEqual(response.json['status'],'pending')
+            self.assertIsNone(response.json['record']['confirmed_reading'])
+        self.assertEqual(self.client.get('/api/analytics').json['confirmed_count'],0)
+        row=response.json['record']
+        confirmed=self.client.post(f'/api/records/{row["id"]}/confirm',json={'reading':'120.1234'},headers={'X-CSRF-Token':self.csrf})
+        self.assertEqual(confirmed.status_code,200)
+        self.assertEqual(confirmed.json['record']['confirmed_reading'],'120.1234')
+        self.assertEqual(self.client.get('/api/analytics').json['confirmed_count'],1)
     def test_recognition_failure_does_not_store_fake_zero(self):
         self.reader.error=ValueError('bad geometry');self.assertEqual(self.upload().status_code,422)
         self.assertEqual(self.client.get('/api/records').json['records'],[])
@@ -139,6 +152,20 @@ class RetryTests(unittest.TestCase):
         from webapp.adapter import assess_regions
         result=assess_regions(self.regions(*[(s,.8) for s in range(2,10)]),[0,0,1,3,0,7,3,1,7,7],[0,0,1,3,0,7,3,2,7,7],recovered=True)
         self.assertEqual(result['quality'],'ok');self.assertIn('重检',result['warnings'][0])
+    def test_all_integer_dials_missing_triggers_high_resolution_retry(self):
+        from webapp.adapter import ReaderAdapter
+        adapter=ReaderAdapter();initial=self.regions(*[(s,.8) for s in range(6,10)])
+        complete=self.regions(*[(s,.8) for s in range(2,10)])
+        with patch.object(adapter,'_detect',side_effect=[initial,complete]) as detect:
+            result,recovered=adapter.detect_with_retry(None,np.zeros((100,100,3),np.uint8))
+        self.assertTrue(recovered);self.assertEqual(len(result),8)
+        self.assertEqual(detect.call_args.kwargs,{'imgsz':1024})
+    def test_no_detections_retry_without_empty_crop_failure(self):
+        from webapp.adapter import ReaderAdapter
+        adapter=ReaderAdapter()
+        with patch.object(adapter,'_detect',return_value=[]) as detect:
+            self.assertEqual(adapter.detect_with_retry(None,np.zeros((100,100,3),np.uint8)),([],False))
+        self.assertEqual(detect.call_count,2)
 
 class ImageQualityTests(unittest.TestCase):
     def setUp(self):
@@ -222,5 +249,25 @@ class AccountsAndDevicesTests(unittest.TestCase):
         import sqlite3
         conn=sqlite3.connect(self.db);conn.execute("UPDATE devices SET last_seen_at='2020-01-01T00:00:00Z'");conn.commit();conn.close()
         self.assertEqual(self.client.get('/api/meters',headers=self.hdr(t)).json['meters'][0]['online_status'],'offline')
+    def test_remote_anonymous_status_can_bootstrap_login(self):
+        with patch.dict('os.environ',{'DRIPLINK_ALLOW_REMOTE':'1'}):
+            app=create_app({'INSTANCE_DIR':self.tmp.name,'DEVICE_TOKEN':'x'*32,'SECRET_KEY':'test-key'},FakeReader())
+        remote=app.test_client();remote.environ_base['REMOTE_ADDR']='192.168.1.20'
+        response=remote.get('/api/status')
+        self.assertEqual(response.status_code,200);self.assertIsNone(response.json['me'])
+        self.assertEqual(response.json['meters'],[])
+        login=remote.post('/api/auth/login',headers={'X-CSRF-Token':response.json['csrf_token']},json={'username':'bob','password':'secret123'})
+        self.assertEqual(login.status_code,200)
+    def test_registered_device_token_works_without_device_id_and_binds_meter(self):
+        self.login('boss');t=self.csrf()
+        self.client.post('/api/meters',headers=self.hdr(t),json={'id':'m1'})
+        token=self.client.post('/api/devices',headers=self.hdr(t),json={'meter_id':'m1'}).json['token']
+        response=self.client.post('/api/device/upload',headers={'Authorization':'Bearer '+token},data={
+            'meter_id':'different','captured_at':'2026-01-01T00:00:00Z','upload_id':'per-device',
+            'file':(io.BytesIO(photo()),'photo.jpg')})
+        self.assertEqual(response.status_code,201);self.assertEqual(response.json['record']['meter_id'],'m1')
+        self.client.post('/api/auth/logout',headers=self.hdr(t));self.login('bob')
+        with self.client.get(response.json['record']['result_url']) as media_response:
+            self.assertEqual(media_response.status_code,403)
 
 if __name__=='__main__':unittest.main()
